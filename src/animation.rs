@@ -29,8 +29,8 @@ impl AnimationConfig {
 // Add the animation systems.
 pub fn add_systems(app: &mut App) {
     app.add_systems(Startup, init);
-    theman::add_systems(app);
     fireplace::add_systems(app);
+    theman::add_systems(app);
 }
 
 // Animation initialization.

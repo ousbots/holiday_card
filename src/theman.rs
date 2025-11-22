@@ -33,7 +33,8 @@ pub fn add_systems(app: &mut App) {
     app.add_message::<AnimationTrigger>()
         .add_systems(Startup, init)
         .add_systems(Update, (handle_animations, idle_action))
-        .add_systems(Update, (handle_keys, trigger_animation::<TheMan>));
+        .add_systems(Update, (handle_keys, trigger_animation::<TheMan>))
+        .add_systems(Update, handle_movement);
 }
 
 // Loop through all the man's sprites and advance their animation.
@@ -85,6 +86,17 @@ fn handle_keys(keyboard: Res<ButtonInput<KeyCode>>, mut events: MessageWriter<An
     }
 }
 
+// Move the man based on the current state.
+fn handle_movement(time: Res<Time>, mut sprite_position: Query<(&AnimationState, &mut Transform)>) {
+    for (state, mut transform) in &mut sprite_position {
+        match *state {
+            AnimationState::Idle => (),
+            AnimationState::WalkingLeft => transform.translation.x -= 110. * time.delta_secs(),
+            AnimationState::WalkingRight => transform.translation.x += 110. * time.delta_secs(),
+        }
+    }
+}
+
 // Change the man's direction using the idle timer.
 fn idle_action(time: Res<Time>, mut query: Query<(&mut IdleTimer, &mut Sprite, &AnimationState)>) {
     for (mut timer, mut sprite, state) in &mut query {
@@ -132,7 +144,7 @@ fn init(
             }),
             ..default()
         },
-        Transform::from_scale(Vec3::splat(4.0)).with_translation(Vec3::new(-200.0, -54.0, 0.0)),
+        Transform::from_scale(Vec3::splat(4.0)).with_translation(Vec3::new(-200.0, -50.0, 0.0)),
         TheMan,
         AnimationConfig::new(0, 8, 10),
         AnimationState::Idle,
