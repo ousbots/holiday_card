@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{audio::Volume, prelude::*};
 use rand::Rng;
 
 use crate::animation::AnimationConfig;
@@ -18,6 +18,8 @@ struct SpriteAssets {
 
 #[derive(Component)]
 struct Fireplace;
+
+const RUNNING_VOLUME: f32 = 1.;
 
 // Add the animation systems.
 pub fn add_systems(app: &mut App) {
@@ -77,9 +79,13 @@ fn init(
             }),
             ..default()
         },
-        Transform::from_scale(Vec3::splat(7.0)).with_translation(Vec3::new(0.0, 0.0, 0.0)),
+        Transform::from_scale(Vec3::splat(7.0)).with_translation(Vec3::new(0.0, 0.0, 1.0)),
         Fireplace,
         AnimationConfig::new(0, 4, 6),
         AnimationState::Running,
+        AudioPlayer::new(asset_server.load("fire.ogg")),
+        PlaybackSettings::LOOP
+            .with_spatial(true)
+            .with_volume(Volume::Linear(RUNNING_VOLUME)),
     ));
 }
