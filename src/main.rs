@@ -4,6 +4,7 @@ mod animation;
 mod app;
 mod background;
 mod fireplace;
+mod interaction;
 mod theman;
 
 fn main() {

@@ -3,10 +3,12 @@ use rand::{Rng, rng};
 use std::time::Duration;
 
 use crate::animation::AnimationConfig;
+use crate::interaction::{InRange, InteractionEvent, Interactor};
 
 #[derive(Component, Clone, Copy, PartialEq)]
 enum State {
     Idle,
+    Action,
     Walking,
 }
 
@@ -64,17 +66,27 @@ pub fn add_systems(app: &mut App) {
     app.add_message::<Trigger>()
         .add_systems(Startup, init)
         .add_systems(Update, (handle_animations, idle_action))
-        .add_systems(Update, (handle_keys, trigger_animation::<TheMan>))
+        .add_systems(Update, (handle_keys, trigger_animation))
         .add_systems(Update, handle_movement)
         .add_systems(Update, handle_audio);
 }
 
 // Loop through all the man's sprites and advance their animation.
-fn handle_animations(time: Res<Time>, mut query: Query<(&mut AnimationConfig, &mut Sprite, &State)>) {
-    for (mut config, mut sprite, state) in &mut query {
+fn handle_animations(time: Res<Time>, mut query: Query<(&mut AnimationConfig, &mut Sprite, &mut State), With<TheMan>>) {
+    for (mut config, mut sprite, mut state) in &mut query {
         // Idle state only has one frame so skip.
         if *state == State::Idle {
             continue;
+        }
+
+        if *state == State::Action {
+            if let Some(atlas) = &sprite.texture_atlas {
+                if atlas.index == config.last_index {
+                    *state = State::Idle;
+                }
+            } else {
+                *state = State::Idle;
+            }
         }
 
         // Track how long the current sprite has been displayed.
@@ -95,30 +107,47 @@ fn handle_animations(time: Res<Time>, mut query: Query<(&mut AnimationConfig, &m
 }
 
 // Handle key input and send animation events.
-fn handle_keys(keyboard: Res<ButtonInput<KeyCode>>, mut events: MessageWriter<Trigger>) {
+fn handle_keys(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mut trigger_events: MessageWriter<Trigger>,
+    mut interaction_events: MessageWriter<InteractionEvent>,
+    query: Query<&InRange, With<TheMan>>,
+) {
     // Check for key presses.
     if keyboard.just_pressed(KeyCode::ArrowLeft) {
-        events.write(Trigger {
+        trigger_events.write(Trigger {
             state: State::Walking,
             direction: Direction::Left,
         });
     } else if keyboard.just_pressed(KeyCode::ArrowRight) {
-        events.write(Trigger {
+        trigger_events.write(Trigger {
             state: State::Walking,
             direction: Direction::Right,
         });
+    } else if keyboard.just_pressed(KeyCode::ArrowUp) {
+        trigger_events.write(Trigger {
+            state: State::Action,
+            direction: Direction::Right,
+        });
+
+        // If in range of an interactable, send interaction event
+        if let Ok(in_range) = query.single() {
+            interaction_events.write(InteractionEvent {
+                id: in_range.id.clone(),
+            });
+        }
     }
 
     // Check for key releases.
     if keyboard.just_released(KeyCode::ArrowLeft) && !keyboard.pressed(KeyCode::ArrowRight) {
-        events.write(Trigger {
+        trigger_events.write(Trigger {
             state: State::Idle,
             direction: Direction::Left,
         });
     }
 
     if keyboard.just_released(KeyCode::ArrowRight) && !keyboard.pressed(KeyCode::ArrowLeft) {
-        events.write(Trigger {
+        trigger_events.write(Trigger {
             state: State::Idle,
             direction: Direction::Right,
         });
@@ -126,10 +155,10 @@ fn handle_keys(keyboard: Res<ButtonInput<KeyCode>>, mut events: MessageWriter<Tr
 }
 
 // Move the man based on the current state.
-fn handle_movement(time: Res<Time>, mut sprite_position: Query<(&State, &Direction, &mut Transform)>) {
+fn handle_movement(time: Res<Time>, mut sprite_position: Query<(&State, &Direction, &mut Transform), With<TheMan>>) {
     for (state, direction, mut transform) in &mut sprite_position {
         match *state {
-            State::Idle => (),
+            State::Idle | State::Action => (),
             State::Walking => match *direction {
                 Direction::Left => {
                     transform.translation.x -= WALKING_SPEED * time.delta_secs();
@@ -146,7 +175,7 @@ fn handle_audio(
     mut commands: Commands,
     time: Res<Time>,
     audio_assets: Res<AudioAssets>,
-    mut query: Query<(&State, &mut StepTimer, &mut FootStep)>,
+    mut query: Query<(&State, &mut StepTimer, &mut FootStep), With<TheMan>>,
 ) {
     for (state, mut timer, mut footstep) in &mut query {
         match *state {
@@ -180,7 +209,7 @@ fn handle_audio(
                     }
                 }
             }
-            State::Idle => {
+            _ => {
                 timer.0.set_duration(Duration::from_secs_f32(WALKING_TIMER_DELAY));
             }
         }
@@ -188,7 +217,7 @@ fn handle_audio(
 }
 
 // Change the man's direction using the idle timer.
-fn idle_action(time: Res<Time>, mut query: Query<(&mut IdleTimer, &mut Sprite, &State)>) {
+fn idle_action(time: Res<Time>, mut query: Query<(&mut IdleTimer, &mut Sprite, &State), With<TheMan>>) {
     for (mut timer, mut sprite, state) in &mut query {
         if *state == State::Idle {
             timer.0.tick(time.delta());
@@ -248,14 +277,18 @@ fn init(
         Direction::Right,
         FootStep::Left,
         SpatialListener::new(AUDIO_WIDTH),
+        Interactor {
+            width: 32.0 * 4.0, // Sprite size (32) * scale (4)
+            height: 32.0 * 4.0,
+        },
     ));
 }
 
 // Read animation messages and update animation state.
-fn trigger_animation<S: Component>(
+fn trigger_animation(
     mut events: MessageReader<Trigger>,
     sprite_assets: Res<SpriteAssets>,
-    query: Single<(&mut AnimationConfig, &mut Sprite, &mut State, &mut Direction), With<S>>,
+    query: Single<(&mut AnimationConfig, &mut Sprite, &mut State, &mut Direction), With<TheMan>>,
 ) {
     let (mut config, mut sprite, mut state, mut direction) = query.into_inner();
     for event in events.read() {
@@ -271,6 +304,11 @@ fn trigger_animation<S: Component>(
                     sprite.flip_x = *direction == Direction::Left;
                 }
 
+                State::Action => {
+                    sprite.image = sprite_assets.standing_sprite.clone();
+                    sprite.texture_atlas = None;
+                }
+
                 State::Walking => match event.direction {
                     Direction::Left => {
                         sprite.image = sprite_assets.walking_sprite.clone();
@@ -280,7 +318,6 @@ fn trigger_animation<S: Component>(
                         });
                         sprite.flip_x = true;
                         config.frame_timer = AnimationConfig::timer_from_fps(config.fps);
-                        *direction = event.direction;
                     }
 
                     Direction::Right => {
@@ -291,12 +328,12 @@ fn trigger_animation<S: Component>(
                         });
                         sprite.flip_x = false;
                         config.frame_timer = AnimationConfig::timer_from_fps(config.fps);
-                        *direction = event.direction;
                     }
                 },
             }
 
             *state = event.state;
+            *direction = event.direction;
         }
     }
 }
