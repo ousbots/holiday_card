@@ -54,7 +54,7 @@ struct SpriteAssets {
 struct TheMan;
 
 const WALKING_SPEED: f32 = 90.;
-const WALKING_VOLUME: f32 = 1.;
+const WALKING_VOLUME: f32 = 0.85;
 
 const WALKING_TIMER: f32 = 0.45;
 const WALKING_TIMER_DELAY: f32 = 0.225;
