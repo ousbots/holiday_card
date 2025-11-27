@@ -21,6 +21,10 @@ pub struct InRange {
     pub id: String,
 }
 
+// Added to Interactable entities when they should be highlighted.
+#[derive(Component)]
+pub struct Highlight {}
+
 // Message sent when an interaction is triggered.
 #[derive(Message)]
 pub struct InteractionEvent {
@@ -37,14 +41,15 @@ pub fn add_systems(app: &mut App) {
 fn detect_overlaps(
     mut commands: Commands,
     interactors: Query<(Entity, &Transform, &Interactor)>,
-    interactables: Query<(&Transform, &Interactable)>,
+    interactables: Query<(Entity, &Transform, &Interactable)>,
     in_range: Query<(Entity, &InRange)>,
 ) {
     for (interactor_entity, interactor_transform, interactor) in &interactors {
         let mut found_overlap = None;
+        let mut interactable_entity = None;
 
         // Check against all interactables.
-        for (interactable_transform, interactable) in &interactables {
+        for (entity, interactable_transform, interactable) in &interactables {
             if aabb_overlap(
                 interactor_transform.translation.truncate(),
                 interactor.width,
@@ -54,7 +59,9 @@ fn detect_overlaps(
                 interactable.height,
             ) {
                 found_overlap = Some(interactable.id.clone());
-                break;
+                interactable_entity = Some(entity);
+            } else {
+                commands.entity(entity).remove::<Highlight>();
             }
         }
 
@@ -66,13 +73,23 @@ fn detect_overlaps(
 
         match (currently_in_range, found_overlap) {
             // New entity entered in-range.
-            (None, Some(id)) => {
-                commands.entity(interactor_entity).insert(InRange { id: id });
+            (None, Some(interactable_id)) => {
+                commands
+                    .entity(interactor_entity)
+                    .insert(InRange { id: interactable_id });
+                if let Some(entity) = interactable_entity {
+                    commands.entity(entity).insert(Highlight {});
+                }
             }
 
             // Entity in-range changed.
-            (Some(current_id), Some(new_id)) if current_id != new_id => {
-                commands.entity(interactor_entity).insert(InRange { id: new_id });
+            (Some(current_id), Some(interactable_id)) if current_id != interactable_id => {
+                commands
+                    .entity(interactor_entity)
+                    .insert(InRange { id: interactable_id });
+                if let Some(entity) = interactable_entity {
+                    commands.entity(entity).insert(Highlight {});
+                }
             }
 
             // Entity left in-range.

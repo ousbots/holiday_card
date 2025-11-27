@@ -1,13 +1,14 @@
 use bevy::{audio::Volume, prelude::*};
 use rand::Rng;
 
-use crate::animation::AnimationConfig;
-use crate::interaction::{Interactable, InteractionEvent};
+use crate::{
+    animation::AnimationConfig,
+    interaction::{Highlight, Interactable, InteractionEvent},
+};
 
 #[derive(Clone, Component, Copy, PartialEq)]
 enum State {
     Off,
-    Starting,
     Running,
 }
 
@@ -21,7 +22,7 @@ struct SpriteAssets {
 #[derive(Component)]
 struct Fireplace;
 
-const RUNNING_VOLUME: f32 = 1.;
+const RUNNING_VOLUME: f32 = 0.9;
 const SPRITE_SCALE: f32 = 7.;
 const SPRITE_WIDTH: f32 = 8.;
 const SPRITE_HEIGHT: f32 = 16.;
@@ -30,8 +31,16 @@ const INTERACTABLE_ID: &str = "fireplace";
 
 // Add the animation systems.
 pub fn add_systems(app: &mut App) {
-    app.add_systems(Startup, init)
-        .add_systems(Update, (handle_animations, handle_interaction, handle_sound));
+    app.add_systems(Startup, init).add_systems(
+        Update,
+        (
+            handle_animations,
+            handle_highlight,
+            reset_highlight,
+            handle_interaction,
+            handle_sound,
+        ),
+    );
 }
 
 // Manage the animation frame timing.
@@ -61,6 +70,36 @@ fn handle_animations(time: Res<Time>, mut query: Query<(&mut AnimationConfig, &m
     }
 }
 
+// Apply a pulsing scale effect to highlighted fireplace.
+fn handle_highlight(
+    time: Res<Time>,
+    query: Query<(&State, &mut Sprite, &mut Transform), (With<Fireplace>, With<Highlight>)>,
+) {
+    for (state, mut sprite, mut transform) in query {
+        if *state == State::Off {
+            let pulse = ((time.elapsed_secs() * 4.).sin() + 1.).mul_add(0.1, 1.);
+            sprite.color = Color::srgba(pulse, pulse, pulse, 1.);
+            transform.scale = Vec3::splat(SPRITE_SCALE * (((pulse - 1.) / 4.) + 1.));
+        } else {
+            sprite.color = Color::WHITE;
+            transform.scale = Vec3::splat(SPRITE_SCALE);
+        }
+    }
+}
+
+// Reset sprite color when highlight is removed.
+fn reset_highlight(
+    mut removed: RemovedComponents<Highlight>,
+    mut query: Query<(&mut Sprite, &mut Transform), With<Fireplace>>,
+) {
+    for entity in removed.read() {
+        if let Ok((mut sprite, mut transform)) = query.get_mut(entity) {
+            sprite.color = Color::WHITE;
+            transform.scale = Vec3::splat(SPRITE_SCALE);
+        }
+    }
+}
+
 // Listen for interaction events and update the state.
 fn handle_interaction(
     sprite_assets: Res<SpriteAssets>,
@@ -81,7 +120,7 @@ fn handle_interaction(
                     });
                 }
 
-                State::Running | State::Starting => {
+                State::Running => {
                     *state = State::Off;
                     sprite.image = sprite_assets.off_sprite.clone();
                     sprite.texture_atlas = None;
@@ -92,11 +131,7 @@ fn handle_interaction(
 }
 
 // Control audio playback based on fireplace state
-fn handle_sound(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    query: Query<(&State, &mut SpatialAudioSink), (With<Fireplace>, Changed<State>)>,
-) {
+fn handle_sound(query: Query<(&State, &mut SpatialAudioSink), (With<Fireplace>, Changed<State>)>) {
     for (state, audio_sink) in &query {
         match *state {
             // Start the fireplace sound effect if it isn't already running.
@@ -105,13 +140,9 @@ fn handle_sound(
             }
 
             // Remove any existing sound effects.
-            // BUG: this doesn't stop the sound.
             State::Off => {
                 audio_sink.pause();
             }
-
-            // TODO: add sound effect for the starting state.
-            State::Starting => {}
         }
     }
 }
