@@ -5,7 +5,7 @@ use bevy::{
     prelude::*,
 };
 
-const AUDIO_SCALE: f32 = 1. / 200.;
+const AUDIO_SCALE: f32 = 1. / 500.;
 
 pub fn run_app() {
     let mut app = App::new();
