@@ -1,5 +1,4 @@
 use bevy::{audio::Volume, prelude::*};
-use rand::Rng;
 
 use crate::{
     animation::AnimationConfig,
@@ -45,7 +44,7 @@ pub fn add_systems(app: &mut App) {
 
 // Manage the animation frame timing.
 fn handle_animations(time: Res<Time>, mut query: Query<(&mut AnimationConfig, &mut Sprite, &State), With<Stereo>>) {
-    for (mut config, mut sprite, mut state) in &mut query {
+    for (mut config, mut sprite, state) in &mut query {
         // Off state only has one frame so skip.
         if *state == State::Off {
             continue;
