@@ -9,6 +9,7 @@ mod interaction;
 mod snow;
 mod stereo;
 mod theman;
+mod tree;
 
 fn main() {
     app::run_app();
