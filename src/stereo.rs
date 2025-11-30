@@ -22,7 +22,8 @@ struct SpriteAssets {
 struct Stereo;
 
 const RUNNING_VOLUME: f32 = 0.9;
-const SPRITE_SCALE: f32 = 7.;
+
+const SPRITE_SCALE: f32 = 2.0;
 const SPRITE_WIDTH: f32 = 20.;
 const SPRITE_HEIGHT: f32 = 16.;
 
@@ -176,7 +177,7 @@ fn init(
             texture_atlas: None,
             ..default()
         },
-        Transform::from_scale(Vec3::splat(SPRITE_SCALE)).with_translation(Vec3::new(260.0, -170.0, 5.0)),
+        Transform::from_scale(Vec3::splat(SPRITE_SCALE)).with_translation(Vec3::new(90.0, -62.0, 5.0)),
         Stereo,
         AnimationConfig::new(0, 4, 4),
         State::Off,

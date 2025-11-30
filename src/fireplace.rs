@@ -23,7 +23,8 @@ struct SpriteAssets {
 struct Fireplace;
 
 const RUNNING_VOLUME: f32 = 0.9;
-const SPRITE_SCALE: f32 = 7.;
+
+const SPRITE_SCALE: f32 = 2.5;
 const SPRITE_WIDTH: f32 = 8.;
 const SPRITE_HEIGHT: f32 = 16.;
 
@@ -179,7 +180,7 @@ fn init(
             texture_atlas: None,
             ..default()
         },
-        Transform::from_scale(Vec3::splat(SPRITE_SCALE)).with_translation(Vec3::new(0.0, -170.0, 5.0)),
+        Transform::from_scale(Vec3::splat(SPRITE_SCALE)).with_translation(Vec3::new(0.0, -54.0, 5.0)),
         Fireplace,
         AnimationConfig::new(0, 4, 6),
         State::Off,

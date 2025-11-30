@@ -22,7 +22,7 @@ struct SpriteAssets {
 #[derive(Component)]
 struct Tree;
 
-const SPRITE_SCALE: f32 = 7.;
+const SPRITE_SCALE: f32 = 2.0;
 const SPRITE_WIDTH: f32 = 14.;
 const SPRITE_HEIGHT: f32 = 16.;
 
@@ -160,7 +160,7 @@ fn init(
             texture_atlas: None,
             ..default()
         },
-        Transform::from_scale(Vec3::splat(SPRITE_SCALE)).with_translation(Vec3::new(-280.0, -170.0, 5.0)),
+        Transform::from_scale(Vec3::splat(SPRITE_SCALE)).with_translation(Vec3::new(-90.0, -62.0, 5.0)),
         Tree,
         AnimationConfig::new(0, 4, 2),
         State::Off,

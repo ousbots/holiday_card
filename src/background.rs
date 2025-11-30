@@ -17,7 +17,7 @@ fn init(mut commands: Commands, asset_server: Res<AssetServer>) {
             image: background,
             ..default()
         },
-        Transform::from_scale(Vec3::splat(3.0)).with_translation(Vec3::new(0.0, 0.0, 0.0)),
+        Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
         Background,
     ));
 }

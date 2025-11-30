@@ -12,18 +12,18 @@ struct SnowParticle {
 struct Snow;
 
 const PARTICLE_COUNT: usize = 200;
-const SPRITE_SCALE: f32 = 4.0;
+const SPRITE_SCALE: f32 = 2.0;
 
-const SPAWN_Y: f32 = 300.0;
-const DESPAWN_Y: f32 = -240.0;
-const SPAWN_X_MIN: f32 = -600.0;
-const SPAWN_X_MAX: f32 = 600.0;
+const SPAWN_Y: f32 = 100.0;
+const DESPAWN_Y: f32 = -80.0;
+const SPAWN_X_MIN: f32 = -200.0;
+const SPAWN_X_MAX: f32 = 200.0;
 
-const FALL_SPEED_MIN: f32 = 60.0;
-const FALL_SPEED_MAX: f32 = 120.0;
+const FALL_SPEED_MIN: f32 = 20.0;
+const FALL_SPEED_MAX: f32 = 40.0;
 
-const DRIFT_SPEED_MIN: f32 = -20.0;
-const DRIFT_SPEED_MAX: f32 = 20.0;
+const DRIFT_SPEED_MIN: f32 = -7.0;
+const DRIFT_SPEED_MAX: f32 = 7.0;
 
 const OPACITY_MIN: f32 = 0.6;
 const OPACITY_MAX: f32 = 1.0;

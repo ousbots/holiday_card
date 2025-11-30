@@ -53,7 +53,9 @@ struct SpriteAssets {
 #[derive(Component)]
 struct TheMan;
 
-const WALKING_SPEED: f32 = 90.;
+const SPRITE_SCALE: f32 = 1.5;
+
+const WALKING_SPEED: f32 = 30.0;
 const WALKING_VOLUME: f32 = 0.85;
 
 const WALKING_TIMER: f32 = 0.45;
@@ -280,7 +282,7 @@ fn init(
             }),
             ..default()
         },
-        Transform::from_scale(Vec3::splat(4.0)).with_translation(Vec3::new(-200.0, -225.0, 10.0)),
+        Transform::from_scale(Vec3::splat(SPRITE_SCALE)).with_translation(Vec3::new(-64.0, -74.0, 10.0)),
         TheMan,
         AnimationConfig::new(0, 8, 10),
         State::Idle,
@@ -290,8 +292,8 @@ fn init(
         FootStep::Left,
         SpatialListener::new(AUDIO_WIDTH),
         Interactor {
-            width: 32.0 * 4.0, // Sprite size (32) * scale (4)
-            height: 32.0 * 4.0,
+            width: 32.0 * SPRITE_SCALE,
+            height: 32.0 * SPRITE_SCALE,
         },
     ));
 }
