@@ -1,0 +1,92 @@
+// Fractal Browning Motion with Perlin Noise implementation for 2D continuous noise generation.
+// References:
+//   - Perlin noise: https://mrl.cs.nyu.edu/~perlin/noise/
+//   - Fractal browning motion: https://en.wikipedia.org/wiki/Fractional_Brownian_motion
+
+// Permutation table for deterministic pseudo-randomness.
+const PERMUTATION: [u8; 256] = [
+    151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142, 8, 99, 37, 240,
+    21, 10, 23, 190, 6, 148, 247, 120, 234, 75, 0, 26, 197, 62, 94, 252, 219, 203, 117, 35, 11, 32, 57, 177, 33, 88,
+    237, 149, 56, 87, 174, 20, 125, 136, 171, 168, 68, 175, 74, 165, 71, 134, 139, 48, 27, 166, 77, 146, 158, 231, 83,
+    111, 229, 122, 60, 211, 133, 230, 220, 105, 92, 41, 55, 46, 245, 40, 244, 102, 143, 54, 65, 25, 63, 161, 1, 216,
+    80, 73, 209, 76, 132, 187, 208, 89, 18, 169, 200, 196, 135, 130, 116, 188, 159, 86, 164, 100, 109, 198, 173, 186,
+    3, 64, 52, 217, 226, 250, 124, 123, 5, 202, 38, 147, 118, 126, 255, 82, 85, 212, 207, 206, 59, 227, 47, 16, 58, 17,
+    182, 189, 28, 42, 223, 183, 170, 213, 119, 248, 152, 2, 44, 154, 163, 70, 221, 153, 101, 155, 167, 43, 172, 9, 129,
+    22, 39, 253, 19, 98, 108, 110, 79, 113, 224, 232, 178, 185, 112, 104, 218, 246, 97, 228, 251, 34, 242, 193, 238,
+    210, 144, 12, 191, 179, 162, 241, 81, 51, 145, 235, 249, 14, 239, 107, 49, 192, 214, 31, 181, 199, 106, 157, 184,
+    84, 204, 176, 115, 121, 50, 45, 127, 4, 150, 254, 138, 236, 205, 93, 222, 114, 67, 29, 24, 72, 243, 141, 128, 195,
+    78, 66, 215, 61, 156, 180,
+];
+
+// Noise generation combining fractal brownian motion and multiple octaves of Perlin noise.
+// NOTE: Each octave has double the frequency and half the amplitude of the previous.
+pub fn generate(x: f32, y: f32, octaves: u32) -> f32 {
+    let mut total = 0.0;
+    let mut frequency = 1.0;
+    let mut amplitude = 1.0;
+    let mut max_value = 0.0;
+
+    for _ in 0..octaves {
+        total += perlin_2d(x * frequency, y * frequency) * amplitude;
+
+        max_value += amplitude;
+        amplitude *= 0.5;
+        frequency *= 2.0;
+    }
+
+    // Normalize to [-1, 1] range
+    total / max_value
+}
+
+// Fade function for smooth interpolation.
+fn fade(t: f32) -> f32 {
+    t * t * t * t.mul_add(t.mul_add(6.0, -15.0), 10.0)
+}
+
+// Compute gradient using hash value to select from 8 possible gradient directions.
+fn grad(hash: u8, x: f32, y: f32) -> f32 {
+    let h = hash & 7;
+    let u = if h < 4 { x } else { y };
+    let v = if h < 4 { y } else { x };
+
+    let u_sign = if (h & 1) == 0 { u } else { -u };
+    let v_sign = if (h & 2) == 0 { v } else { -v };
+
+    u_sign + v_sign
+}
+
+// Linear interpolation.
+fn lerp(t: f32, a: f32, b: f32) -> f32 {
+    t.mul_add(b - a, a)
+}
+
+// Generate 2D Perlin noise at the given coordinates, normalized in the range [-1, 1].
+fn perlin_2d(x: f32, y: f32) -> f32 {
+    // Relative position within the cell.
+    let x_rel = x - x.floor();
+    let y_rel = y - y.floor();
+
+    // Fade curves for smooth interpolation.
+    let u = fade(x_rel);
+    let v = fade(y_rel);
+
+    // Hash coordinates of the 4 cube corners.
+    let a = f32::from(perm(x)) + y;
+    let b = f32::from(perm(x + 1.)) + y;
+    let aa = perm(a);
+    let ab = perm(a + 1.);
+    let ba = perm(b);
+    let bb = perm(b + 1.);
+
+    // Blend results from 4 corners of the square.
+    lerp(
+        v,
+        lerp(u, grad(aa, x_rel, y_rel), grad(ba, x_rel - 1.0, y_rel)),
+        lerp(u, grad(ab, x_rel, y_rel - 1.0), grad(bb, x_rel - 1.0, y_rel - 1.0)),
+    )
+}
+
+// Get permutation value with wrapping
+const fn perm(index: f32) -> u8 {
+    PERMUTATION[(index as usize) & 255]
+}
