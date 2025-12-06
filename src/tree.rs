@@ -24,20 +24,65 @@ struct SpriteAssets {
 struct Tree;
 
 #[derive(Component)]
-struct ColorChangeTimer(Timer);
+struct LightTransition {
+    current_color: Color,
+    target_color: Color,
+    current_intensity: f32,
+    target_intensity: f32,
+    progress: f32,
+    transition_duration: f32,
+}
 
 const INTERACTABLE_ID: &str = "tree";
 
 const SPRITE_WIDTH: f32 = 14.;
 const SPRITE_HEIGHT: f32 = 16.;
 
-const LIGHT_INTENSITY: f32 = 0.5;
+const LIGHT_INTENSITY_RANGE: std::ops::RangeInclusive<f32> = 0.2..=0.5;
 const LIGHT_RADIUS: f32 = 60.0;
-const LIGHT_COLOR_BLUE: Color = Color::srgb(0.2, 0.2, 0.8);
-const LIGHT_COLOR_GREEN: Color = Color::srgb(0.2, 0.8, 0.2);
-const LIGHT_COLOR_RED: Color = Color::srgb(0.8, 0.2, 0.2);
 
-const COLOR_CHANGE_DELAY: f32 = 0.5;
+const LIGHT_COLORS: [Color; 3] = [
+    Color::srgb(0.2, 0.2, 0.8),
+    Color::srgb(0.2, 0.8, 0.2),
+    Color::srgb(0.8, 0.2, 0.2),
+];
+
+const LIGHT_CHANGE_DELAY: f32 = 0.75;
+
+impl LightTransition {
+    // A new randomized light transition.
+    fn new() -> Self {
+        Self {
+            current_color: Self::random_color(),
+            target_color: Self::random_color(),
+            current_intensity: 0.0,
+            target_intensity: Self::random_intensity(),
+            progress: 0.0,
+            transition_duration: LIGHT_CHANGE_DELAY,
+        }
+    }
+
+    // Randomize the current light transition.
+    fn randomize(&mut self) {
+        let mut new_color = Self::random_color();
+        while new_color == self.current_color {
+            new_color = Self::random_color();
+        }
+        self.current_color = self.target_color;
+        self.target_color = new_color;
+        self.current_intensity = self.target_intensity;
+        self.target_intensity = Self::random_intensity();
+        self.progress = 0.0;
+    }
+
+    fn random_color() -> Color {
+        LIGHT_COLORS[rand::rng().random_range(0..LIGHT_COLORS.len())]
+    }
+
+    fn random_intensity() -> f32 {
+        rand::rng().random_range(LIGHT_INTENSITY_RANGE)
+    }
+}
 
 // Add the animation systems.
 pub fn add_systems(app: &mut App) {
@@ -49,8 +94,8 @@ pub fn add_systems(app: &mut App) {
             handle_highlight_reset,
             handle_interaction,
             handle_interaction_disable_highlight,
-            handle_light,
-            handle_color_change,
+            handle_light_state,
+            handle_light_transition,
         ),
     );
 }
@@ -82,7 +127,7 @@ fn handle_animations(time: Res<Time>, mut query: Query<(&mut AnimationConfig, &m
     }
 }
 
-// Apply a pulsing scale effect to highlighted tree.
+// Apply a pulsing scale effect to highlight the tree is interactable.
 fn handle_highlight(
     time: Res<Time>,
     query: Query<(&State, &mut Sprite, &mut Transform, &Highlight, &Interactable), (With<Tree>, With<Highlight>)>,
@@ -99,7 +144,7 @@ fn handle_highlight(
     }
 }
 
-// Reset sprite color when highlight is removed.
+// Reset the sprite when the highlight is removed.
 fn handle_highlight_reset(
     mut removed: RemovedComponents<Highlight>,
     mut query: Query<(&mut Sprite, &mut Transform), With<Tree>>,
@@ -112,7 +157,7 @@ fn handle_highlight_reset(
     }
 }
 
-// Listen for interaction events and update the state.
+// Listen for interaction events and update the tree state.
 fn handle_interaction(
     sprite_assets: Res<SpriteAssets>,
     mut events: MessageReader<InteractionEvent>,
@@ -142,6 +187,7 @@ fn handle_interaction(
     }
 }
 
+// Disable the highlighting after the first time the tree has been interacted with.
 fn handle_interaction_disable_highlight(
     mut query: Query<(&mut State, &mut Interactable), (With<Tree>, Changed<State>)>,
 ) {
@@ -153,46 +199,47 @@ fn handle_interaction_disable_highlight(
 }
 
 // Adjust light intensity based on the tree state.
-fn handle_light(mut query: Query<(&State, &mut PointLight2d), (With<Tree>, Changed<State>)>) {
-    for (state, mut light) in &mut query {
+fn handle_light_state(
+    mut commands: Commands,
+    mut query: Query<(Entity, &State, &mut PointLight2d), (With<Tree>, Changed<State>)>,
+) {
+    for (entity, state, mut light) in &mut query {
         match *state {
             State::On => {
-                light.intensity = LIGHT_INTENSITY;
+                commands.entity(entity).insert(LightTransition::new());
             }
             State::Off => {
                 light.intensity = 0.0;
+                commands.entity(entity).remove::<LightTransition>();
             }
         }
     }
 }
 
-// Randomly change light color over time when the tree is on.
-fn handle_color_change(
-    time: Res<Time>,
-    mut query: Query<(&State, &mut PointLight2d, &mut ColorChangeTimer), With<Tree>>,
-) {
-    let mut rng = rand::rng();
+// Smoothly transition the light color and intensity over time when the tree is on.
+fn handle_light_transition(time: Res<Time>, mut query: Query<(&mut PointLight2d, &mut LightTransition), With<Tree>>) {
+    for (mut light, mut transition) in &mut query {
+        transition.progress += time.delta().as_secs_f32() / transition.transition_duration;
 
-    let select_color = |index| -> Color {
-        match index {
-            0 => LIGHT_COLOR_BLUE,
-            1 => LIGHT_COLOR_GREEN,
-            _ => LIGHT_COLOR_RED,
+        // Pick a new target when the current transition is complete.
+        if transition.progress >= 1.0 {
+            transition.randomize();
+            continue;
         }
-    };
 
-    for (state, mut light, mut timer) in &mut query {
-        if *state == State::On {
-            timer.0.tick(time.delta());
+        // Apply sine-wave easing and interpolate.
+        let current_rgb = transition.current_color.to_srgba();
+        let target_rgb = transition.target_color.to_srgba();
+        let eased_t = (1.0 - (std::f32::consts::PI * transition.progress).cos()) / 2.0;
 
-            if timer.0.just_finished() {
-                let mut color = select_color(rng.random_range(0..=2));
-                while light.color == color {
-                    color = select_color(rng.random_range(0..=2));
-                }
-                light.color = color;
-            }
-        }
+        light.color = Color::srgb(
+            (target_rgb.red - current_rgb.red).mul_add(eased_t, current_rgb.red),
+            (target_rgb.green - current_rgb.green).mul_add(eased_t, current_rgb.green),
+            (target_rgb.blue - current_rgb.blue).mul_add(eased_t, current_rgb.blue),
+        );
+
+        light.intensity =
+            (transition.target_intensity - transition.current_intensity).mul_add(eased_t, transition.current_intensity);
     }
 }
 
@@ -228,11 +275,10 @@ fn init(
             first: true,
         },
         PointLight2d {
-            color: LIGHT_COLOR_GREEN,
+            color: LIGHT_COLORS[0],
             intensity: 0.0,
             radius: LIGHT_RADIUS,
             ..default()
         },
-        ColorChangeTimer(Timer::from_seconds(COLOR_CHANGE_DELAY, TimerMode::Repeating)),
     ));
 }
