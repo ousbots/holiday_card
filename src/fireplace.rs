@@ -20,24 +20,29 @@ struct Fireplace;
 
 const INTERACTABLE_ID: &str = "fireplace";
 
-const RUNNING_VOLUME: f32 = 0.9;
+const VOLUME_LEVEL: f32 = 0.9;
 
+// Sprite parameters.
 const SPRITE_WIDTH: f32 = 8.;
 const SPRITE_HEIGHT: f32 = 16.;
 
-const LIGHT_RADIUS: f32 = 150.0;
-const LIGHT_COLORS: [Color; 1] = [Color::srgb(1.0, 0.6, 0.2)];
+// Light effect parameters.
+const LIGHT_RADIUS: f32 = 120.0;
+const LIGHT_COLORS: [Color; 3] = [
+    Color::srgb(1.0, 0.6, 0.2),
+    Color::srgb(1.0, 0.62, 0.18),
+    Color::srgb(1.0, 0.58, 0.22),
+];
 
-// Light effect noise parameters.
 const INTENSITY_OCTAVES: u32 = 4;
 const COLOR_OCTAVES: u32 = 2;
 
 const INTENSITY_FREQ: f32 = 2.0;
-const INTENSITY_MIN: f32 = 0.3;
-const INTENSITY_AMPLITUDE: f32 = 0.7;
+const INTENSITY_MIN: f32 = 0.6;
+const INTENSITY_AMPLITUDE: f32 = 0.4;
 
 const COLOR_FREQ: f32 = 1.0;
-const COLOR_TEMPERATURE: f32 = 1.5;
+const COLOR_TEMPERATURE: f32 = 0.2;
 const COLOR_SEED_OFFSET: f32 = 100.0;
 
 // Add the animation systems.
@@ -187,7 +192,7 @@ fn init(
         AudioPlayer::new(asset_server.load("fireplace/fire.ogg")),
         PlaybackSettings::LOOP
             .with_spatial(true)
-            .with_volume(Volume::Linear(RUNNING_VOLUME))
+            .with_volume(Volume::Linear(VOLUME_LEVEL))
             .paused(),
         Interactable {
             id: INTERACTABLE_ID.to_string(),

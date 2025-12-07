@@ -23,7 +23,7 @@ const INTERACTABLE_ID: &str = "tree";
 const SPRITE_WIDTH: f32 = 14.;
 const SPRITE_HEIGHT: f32 = 16.;
 
-const LIGHT_RADIUS: f32 = 80.0;
+const LIGHT_RADIUS: f32 = 60.0;
 const LIGHT_COLORS: [Color; 4] = [
     Color::srgb(0.2, 0.2, 0.8),
     Color::srgb(0.2, 0.8, 0.2),
@@ -36,8 +36,8 @@ const INTENSITY_OCTAVES: u32 = 3;
 const COLOR_OCTAVES: u32 = 2;
 
 const INTENSITY_FREQ: f32 = 1.0;
-const INTENSITY_MIN: f32 = 0.7;
-const INTENSITY_AMPLITUDE: f32 = 0.3;
+const INTENSITY_MIN: f32 = 0.5;
+const INTENSITY_AMPLITUDE: f32 = 0.2;
 
 const COLOR_FREQ: f32 = 1.0;
 const COLOR_TEMPERATURE: f32 = 0.5;
