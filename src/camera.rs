@@ -21,7 +21,6 @@ fn init(mut commands: Commands) {
     };
     let projection = Projection::Orthographic(ortho);
 
-    // Display help UI in the upper left.
     commands.spawn((
         Camera2d,
         projection,
@@ -31,11 +30,15 @@ fn init(mut commands: Commands) {
                 ..default()
             },
         },
+    ));
+
+    // Display help UI in the upper left.
+    commands.spawn((
         Text::new("move: left/right - interact: up"),
         Node {
             position_type: PositionType::Absolute,
             top: px(12),
-            left: px(12),
+            right: px(12),
             ..default()
         },
     ));
