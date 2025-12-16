@@ -27,7 +27,7 @@ const SPRITE_WIDTH: f32 = 32.;
 const SPRITE_HEIGHT: f32 = 50.;
 
 // Light effect parameters.
-const LIGHT_RADIUS: f32 = 120.0;
+const LIGHT_RADIUS: f32 = 180.0;
 const LIGHT_COLORS: [Color; 3] = [
     Color::srgb(1.0, 0.6, 0.2),
     Color::srgb(1.0, 0.62, 0.18),
@@ -185,7 +185,7 @@ fn init(
             texture_atlas: None,
             ..default()
         },
-        Transform::from_translation(Vec3::new(0.0, -31.0, 5.0)),
+        Transform::from_translation(Vec3::new(120.0, -31.0, 5.0)),
         Fireplace,
         AnimationConfig::new(0, 4, 6),
         State::Off,

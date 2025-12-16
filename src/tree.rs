@@ -23,7 +23,7 @@ const INTERACTABLE_ID: &str = "tree";
 const SPRITE_WIDTH: f32 = 14.;
 const SPRITE_HEIGHT: f32 = 16.;
 
-const LIGHT_RADIUS: f32 = 60.0;
+const LIGHT_RADIUS: f32 = 50.0;
 const LIGHT_COLORS: [Color; 4] = [
     Color::srgb(0.2, 0.2, 0.8),
     Color::srgb(0.2, 0.8, 0.2),
@@ -165,7 +165,7 @@ fn init(
             texture_atlas: None,
             ..default()
         },
-        Transform::from_translation(Vec3::new(-90.0, -38.0, 5.0)),
+        Transform::from_translation(Vec3::new(4.0, -38.0, 5.0)),
         Tree,
         AnimationConfig::new(0, 4, 2),
         State::Off,
