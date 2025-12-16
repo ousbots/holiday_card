@@ -165,7 +165,7 @@ fn init(
             texture_atlas: None,
             ..default()
         },
-        Transform::from_translation(Vec3::new(4.0, -38.0, 5.0)),
+        Transform::from_translation(Vec3::new(-58.0, -38.0, 5.0)),
         Tree,
         AnimationConfig::new(0, 4, 2),
         State::Off,

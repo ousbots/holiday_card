@@ -121,7 +121,7 @@ fn init(
             texture_atlas: None,
             ..default()
         },
-        Transform::from_translation(Vec3::new(-58.0, -46.0, 5.0)),
+        Transform::from_translation(Vec3::new(18.0, -46.0, 5.0)),
         Stereo,
         AnimationConfig::new(0, 4, 4),
         State::Off,
