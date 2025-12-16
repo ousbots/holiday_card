@@ -4,9 +4,29 @@ use bevy_light_2d::prelude::*;
 #[derive(Component)]
 struct Background;
 
+#[derive(Component)]
+struct Snow {
+    timer: Timer,
+    rise: u32,
+}
+
 // Add the animation systems.
 pub fn add_systems(app: &mut App) {
-    app.add_systems(Startup, init);
+    app.add_systems(Startup, init).add_systems(Update, handle_snow);
+}
+
+// Handle the snow rising over time.
+fn handle_snow(time: Res<Time>, mut query: Query<(&mut Snow, &mut Transform), With<Background>>) {
+    for (mut snow, mut transform) in &mut query {
+        if snow.rise > 0 {
+            snow.timer.tick(time.delta());
+
+            if snow.timer.just_finished() {
+                transform.translation.y += 1.0;
+                snow.rise -= 1;
+            }
+        }
+    }
 }
 
 // Background initialization.
@@ -29,8 +49,12 @@ fn init(mut commands: Commands, asset_server: Res<AssetServer>) {
             image: snow,
             ..default()
         },
-        Transform::from_xyz(0.0, -75.0, 0.0),
+        Transform::from_xyz(0.0, -75.0, 0.5),
         Background,
+        Snow {
+            timer: Timer::from_seconds(60.0, TimerMode::Repeating),
+            rise: 15,
+        },
     ));
 
     // Moonlight.
