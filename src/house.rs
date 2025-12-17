@@ -12,7 +12,7 @@ pub fn add_systems(app: &mut App) {
 // House initialization.
 fn init(mut commands: Commands, asset_server: Res<AssetServer>) {
     // Create the house.
-    let background = asset_server.load("house.png");
+    let background = asset_server.load("house/house.png");
     commands.spawn((
         Sprite {
             image: background,
