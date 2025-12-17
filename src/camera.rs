@@ -4,7 +4,7 @@ use bevy_light_2d::prelude::*;
 const WINDOW_HEIGHT: f32 = 150.0;
 const WINDOW_WIDTH: f32 = 300.0;
 
-const AMBIENT_BRIGHTNESS: f32 = 0.1;
+const AMBIENT_BRIGHTNESS: f32 = 0.05;
 
 // Add the camera systems.
 pub fn add_systems(app: &mut App) {

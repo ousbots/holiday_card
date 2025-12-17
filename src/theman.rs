@@ -59,7 +59,8 @@ const WALKING_VOLUME: f32 = 0.85;
 const WALKING_TIMER: f32 = 0.45;
 const WALKING_TIMER_DELAY: f32 = 0.225;
 
-const AUDIO_WIDTH: f32 = -8.;
+// NOTE: not sure why the audio width needs to be negative to sound right.
+const AUDIO_WIDTH: f32 = -10.0;
 
 // Add the animation systems.
 pub fn add_systems(app: &mut App) {

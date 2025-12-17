@@ -20,7 +20,7 @@ struct Fireplace;
 
 const INTERACTABLE_ID: &str = "fireplace";
 
-const VOLUME_LEVEL: f32 = 0.9;
+const VOLUME_LEVEL: f32 = 0.75;
 
 // Sprite parameters.
 const SPRITE_WIDTH: f32 = 16.;

@@ -6,7 +6,7 @@ use bevy_light_2d::prelude::*;
 
 use crate::{animation, camera};
 
-const AUDIO_SCALE: f32 = 1. / 500.;
+const AUDIO_SCALE: f32 = 1. / 200.;
 
 pub fn run_app() {
     let mut app = App::new();
