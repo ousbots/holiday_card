@@ -10,6 +10,7 @@ mod house;
 mod interaction;
 mod noise;
 mod snow;
+mod snowman;
 mod stereo;
 mod theman;
 mod tree;
