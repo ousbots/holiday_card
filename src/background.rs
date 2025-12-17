@@ -54,7 +54,7 @@ fn init(mut commands: Commands, asset_server: Res<AssetServer>) {
         Transform::from_xyz(0.0, -75.0, 1.5),
         Background,
         SnowMovement {
-            timer: Timer::from_seconds(60.0 * 3.0, TimerMode::Once),
+            timer: Timer::from_seconds(60.0 * 5.0, TimerMode::Once),
             rise: 15.0,
             progress: 0.0,
         },

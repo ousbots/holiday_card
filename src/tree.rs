@@ -33,13 +33,13 @@ const LIGHT_COLORS: [Color; 4] = [
 
 // Light effect noise parameters.
 const INTENSITY_OCTAVES: u32 = 3;
-const COLOR_OCTAVES: u32 = 2;
+const COLOR_OCTAVES: u32 = 3;
 
 const INTENSITY_FREQ: f32 = 1.0;
-const INTENSITY_MIN: f32 = 0.5;
+const INTENSITY_MIN: f32 = 0.4;
 const INTENSITY_AMPLITUDE: f32 = 0.2;
 
-const COLOR_FREQ: f32 = 1.0;
+const COLOR_FREQ: f32 = 0.5;
 const COLOR_TEMPERATURE: f32 = 0.5;
 const COLOR_SEED_OFFSET: f32 = 100.0;
 

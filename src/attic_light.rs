@@ -22,7 +22,7 @@ const INTERACTABLE_ID: &str = "attic-light";
 const SPRITE_WIDTH: f32 = 2.0;
 const SPRITE_HEIGHT: f32 = 16.0;
 
-const SWITCH_VOLUME: f32 = 0.50;
+const SWITCH_VOLUME: f32 = 0.40;
 
 // Light effect parameters.
 const LIGHT_RADIUS: f32 = 160.0;
@@ -35,12 +35,12 @@ const LIGHT_COLORS: [Color; 3] = [
 const INTENSITY_OCTAVES: u32 = 4;
 const COLOR_OCTAVES: u32 = 5;
 
-const INTENSITY_FREQ: f32 = 4.0;
+const INTENSITY_FREQ: f32 = 2.0;
 const INTENSITY_MIN: f32 = 0.4;
-const INTENSITY_AMPLITUDE: f32 = 0.3;
+const INTENSITY_AMPLITUDE: f32 = 0.2;
 
 const COLOR_FREQ: f32 = 100.0;
-const COLOR_TEMPERATURE: f32 = 0.2;
+const COLOR_TEMPERATURE: f32 = 0.5;
 const COLOR_SEED_OFFSET: f32 = 100.0;
 
 // Add the animation systems.
