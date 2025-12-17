@@ -9,6 +9,7 @@ mod chair;
 mod fireplace;
 mod flickering_light;
 mod house;
+mod input;
 mod interaction;
 mod noise;
 mod snow;

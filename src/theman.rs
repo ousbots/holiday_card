@@ -2,8 +2,11 @@ use bevy::{audio::Volume, prelude::*};
 use rand::{Rng, rng};
 use std::time::Duration;
 
-use crate::animation::AnimationConfig;
-use crate::interaction::{InRange, InteractionEvent, Interactor};
+use crate::{
+    animation::AnimationConfig,
+    input::{Direction, InputEvent},
+    interaction::{InRange, InteractionEvent, Interactor},
+};
 
 #[derive(Component, Clone, Copy, PartialEq)]
 enum State {
@@ -13,21 +16,9 @@ enum State {
 }
 
 #[derive(Component, Clone, Copy, PartialEq)]
-enum Direction {
-    Left,
-    Right,
-}
-
-#[derive(Component, Clone, Copy, PartialEq)]
 enum FootStep {
     Left,
     Right,
-}
-
-#[derive(Message)]
-struct Trigger {
-    state: State,
-    direction: Direction,
 }
 
 #[derive(Component)]
@@ -35,6 +26,11 @@ struct IdleTimer(Timer);
 
 #[derive(Component)]
 struct StepTimer(Timer);
+
+#[derive(Component)]
+pub struct Navigation {
+    pub x: f32,
+}
 
 #[derive(Clone, Resource)]
 struct AudioAssets {
@@ -51,7 +47,7 @@ struct SpriteAssets {
 }
 
 #[derive(Component)]
-struct TheMan;
+pub struct TheMan;
 
 const WALKING_SPEED: f32 = 30.0;
 const WALKING_VOLUME: f32 = 0.85;
@@ -64,12 +60,18 @@ const AUDIO_WIDTH: f32 = -10.0;
 
 // Add the animation systems.
 pub fn add_systems(app: &mut App) {
-    app.add_message::<Trigger>()
-        .add_systems(Startup, init)
-        .add_systems(Update, (handle_animations, idle_action))
-        .add_systems(Update, (handle_keys, trigger_animation))
-        .add_systems(Update, handle_movement)
-        .add_systems(Update, handle_audio);
+    app.add_message::<InputEvent>().add_systems(Startup, init).add_systems(
+        Update,
+        (
+            handle_animations,
+            handle_audio,
+            handle_messages,
+            handle_movement,
+            handle_interactions,
+            handle_navigation_finished,
+            idle_action,
+        ),
+    );
 }
 
 // Loop through all the man's sprites and advance their animation.
@@ -103,71 +105,6 @@ fn handle_animations(time: Res<Time>, mut query: Query<(&mut AnimationConfig, &m
                 atlas.index += 1;
             }
             config.frame_timer = AnimationConfig::timer_from_fps(config.fps);
-        }
-    }
-}
-
-// Handle key input and send animation events.
-fn handle_keys(
-    keyboard: Res<ButtonInput<KeyCode>>,
-    mut trigger_events: MessageWriter<Trigger>,
-    mut interaction_events: MessageWriter<InteractionEvent>,
-    query: Query<&InRange>,
-) {
-    // Check for key presses.
-    if keyboard.just_pressed(KeyCode::ArrowLeft) {
-        trigger_events.write(Trigger {
-            state: State::Walking,
-            direction: Direction::Left,
-        });
-    } else if keyboard.just_pressed(KeyCode::ArrowRight) {
-        trigger_events.write(Trigger {
-            state: State::Walking,
-            direction: Direction::Right,
-        });
-    } else if keyboard.just_pressed(KeyCode::ArrowUp) {
-        trigger_events.write(Trigger {
-            state: State::Action,
-            direction: Direction::Right,
-        });
-
-        // If in range of an interactable, send interaction event
-        if let Ok(in_range) = query.single() {
-            interaction_events.write(InteractionEvent {
-                id: in_range.id.clone(),
-            });
-        }
-    }
-
-    // Check for key releases.
-    if keyboard.just_released(KeyCode::ArrowLeft) && !keyboard.pressed(KeyCode::ArrowRight) {
-        trigger_events.write(Trigger {
-            state: State::Idle,
-            direction: Direction::Left,
-        });
-    }
-
-    if keyboard.just_released(KeyCode::ArrowRight) && !keyboard.pressed(KeyCode::ArrowLeft) {
-        trigger_events.write(Trigger {
-            state: State::Idle,
-            direction: Direction::Right,
-        });
-    }
-}
-
-// Move the man based on the current state.
-fn handle_movement(time: Res<Time>, mut sprite_position: Query<(&State, &Direction, &mut Transform), With<TheMan>>) {
-    for (state, direction, mut transform) in &mut sprite_position {
-        match *state {
-            State::Idle | State::Action => (),
-            State::Walking => match *direction {
-                Direction::Left => {
-                    transform.translation.x -= WALKING_SPEED * time.delta_secs();
-                }
-                Direction::Right => {
-                    transform.translation.x += WALKING_SPEED * time.delta_secs();
-                }
-            },
         }
     }
 }
@@ -213,6 +150,190 @@ fn handle_audio(
             _ => {
                 timer.0.set_duration(Duration::from_secs_f32(WALKING_TIMER_DELAY));
             }
+        }
+    }
+}
+
+// Interact with objects when they're in range and the man is in the action state.
+fn handle_interactions(
+    mut interaction_events: MessageWriter<InteractionEvent>,
+    state_query: Query<&State, (With<TheMan>, Changed<State>)>,
+    range_query: Query<&InRange>,
+) {
+    for state in &state_query {
+        for in_range in &range_query {
+            if *state == State::Action {
+                interaction_events.write(InteractionEvent {
+                    id: in_range.id.clone(),
+                });
+            }
+        }
+    }
+}
+
+// Read animation messages and update animation state.
+fn handle_messages(
+    mut commands: Commands,
+    mut events: MessageReader<InputEvent>,
+    sprite_assets: Res<SpriteAssets>,
+    query: Single<
+        (
+            Entity,
+            &mut AnimationConfig,
+            &mut Sprite,
+            &mut State,
+            &mut Direction,
+            &Transform,
+        ),
+        With<TheMan>,
+    >,
+) {
+    let (entity, mut config, mut sprite, mut state, mut direction, transform) = query.into_inner();
+    for event in events.read() {
+        match (event.direction, event.target) {
+            (None, None) => {
+                sprite.image = sprite_assets.standing_sprite.clone();
+                sprite.texture_atlas = Some(TextureAtlas {
+                    layout: sprite_assets.standing_layout.clone(),
+                    index: 0,
+                });
+                sprite.flip_x = *direction == Direction::Left;
+                *state = State::Idle;
+            }
+
+            (Some(event_direction), None) => match event_direction {
+                Direction::Left => {
+                    sprite.image = sprite_assets.walking_sprite.clone();
+                    sprite.texture_atlas = Some(TextureAtlas {
+                        layout: sprite_assets.walking_layout.clone(),
+                        index: 0,
+                    });
+                    sprite.flip_x = true;
+                    config.frame_timer = AnimationConfig::timer_from_fps(config.fps);
+                    *state = State::Walking;
+                    *direction = event_direction;
+                }
+
+                Direction::Right => {
+                    sprite.image = sprite_assets.walking_sprite.clone();
+                    sprite.texture_atlas = Some(TextureAtlas {
+                        layout: sprite_assets.walking_layout.clone(),
+                        index: 0,
+                    });
+                    sprite.flip_x = false;
+                    config.frame_timer = AnimationConfig::timer_from_fps(config.fps);
+                    *state = State::Walking;
+                    *direction = event_direction;
+                }
+
+                Direction::Up => {
+                    sprite.image = sprite_assets.standing_sprite.clone();
+                    sprite.texture_atlas = None;
+                    *state = State::Action;
+                }
+            },
+
+            (None, Some(target)) => {
+                let event_direction = if target.x > transform.translation.x {
+                    Direction::Right
+                } else if target.x < transform.translation.x {
+                    Direction::Left
+                } else {
+                    Direction::Up
+                };
+
+                commands.entity(entity).insert(Navigation { x: target.x });
+
+                match event_direction {
+                    Direction::Right => {
+                        sprite.image = sprite_assets.walking_sprite.clone();
+                        sprite.texture_atlas = Some(TextureAtlas {
+                            layout: sprite_assets.walking_layout.clone(),
+                            index: 0,
+                        });
+                        sprite.flip_x = false;
+                        config.frame_timer = AnimationConfig::timer_from_fps(config.fps);
+                        *state = State::Walking;
+                        *direction = event_direction;
+                    }
+
+                    Direction::Left => {
+                        sprite.image = sprite_assets.walking_sprite.clone();
+                        sprite.texture_atlas = Some(TextureAtlas {
+                            layout: sprite_assets.walking_layout.clone(),
+                            index: 0,
+                        });
+                        sprite.flip_x = true;
+                        config.frame_timer = AnimationConfig::timer_from_fps(config.fps);
+                        *state = State::Walking;
+                        *direction = event_direction;
+                    }
+
+                    Direction::Up => {
+                        *state = State::Idle;
+                        *direction = Direction::Up;
+                    }
+                }
+            }
+
+            (Some(_), Some(_)) => {
+                println!("recieved input event with both direction and target data, ignoring!");
+            }
+        }
+    }
+}
+
+// Move the man based on the current state.
+fn handle_movement(
+    time: Res<Time>,
+    mut commands: Commands,
+    query: Query<(Entity, &mut State, &Direction, &mut Transform, Option<&Navigation>), With<TheMan>>,
+) {
+    for (entity, mut state, direction, mut transform, navigation) in query {
+        match *state {
+            State::Walking => {
+                // Check navigation status.
+                if let Some(target) = navigation
+                    && ((*direction == Direction::Left && transform.translation.x <= target.x)
+                        || (*direction == Direction::Right && transform.translation.x >= target.x))
+                {
+                    *state = State::Idle;
+                    commands.entity(entity).remove::<Navigation>();
+                    continue;
+                }
+
+                // Walking transformation.
+                match *direction {
+                    Direction::Left => {
+                        transform.translation.x -= WALKING_SPEED * time.delta_secs();
+                    }
+                    Direction::Right => {
+                        transform.translation.x += WALKING_SPEED * time.delta_secs();
+                    }
+                    Direction::Up => {}
+                }
+            }
+
+            State::Idle | State::Action => (),
+        }
+    }
+}
+
+// Return the man to the idle state after a Navigation component was removed.
+fn handle_navigation_finished(
+    sprite_assets: Res<SpriteAssets>,
+    mut query: Query<(&mut Sprite, &mut State, &Direction), With<TheMan>>,
+    mut removed: RemovedComponents<Navigation>,
+) {
+    for entity in removed.read() {
+        if let Ok((mut sprite, mut state, direction)) = query.get_mut(entity) {
+            sprite.image = sprite_assets.standing_sprite.clone();
+            sprite.texture_atlas = Some(TextureAtlas {
+                layout: sprite_assets.standing_layout.clone(),
+                index: 0,
+            });
+            sprite.flip_x = *direction == Direction::Left;
+            *state = State::Action;
         }
     }
 }
@@ -295,58 +416,4 @@ fn init(
             height: 32.0,
         },
     ));
-}
-
-// Read animation messages and update animation state.
-fn trigger_animation(
-    mut events: MessageReader<Trigger>,
-    sprite_assets: Res<SpriteAssets>,
-    query: Single<(&mut AnimationConfig, &mut Sprite, &mut State, &mut Direction), With<TheMan>>,
-) {
-    let (mut config, mut sprite, mut state, mut direction) = query.into_inner();
-    for event in events.read() {
-        // Only update if state changed
-        if *state != event.state || *direction != event.direction {
-            match event.state {
-                State::Idle => {
-                    sprite.image = sprite_assets.standing_sprite.clone();
-                    sprite.texture_atlas = Some(TextureAtlas {
-                        layout: sprite_assets.standing_layout.clone(),
-                        index: 0,
-                    });
-                    sprite.flip_x = *direction == Direction::Left;
-                }
-
-                State::Action => {
-                    sprite.image = sprite_assets.standing_sprite.clone();
-                    sprite.texture_atlas = None;
-                }
-
-                State::Walking => match event.direction {
-                    Direction::Left => {
-                        sprite.image = sprite_assets.walking_sprite.clone();
-                        sprite.texture_atlas = Some(TextureAtlas {
-                            layout: sprite_assets.walking_layout.clone(),
-                            index: 0,
-                        });
-                        sprite.flip_x = true;
-                        config.frame_timer = AnimationConfig::timer_from_fps(config.fps);
-                    }
-
-                    Direction::Right => {
-                        sprite.image = sprite_assets.walking_sprite.clone();
-                        sprite.texture_atlas = Some(TextureAtlas {
-                            layout: sprite_assets.walking_layout.clone(),
-                            index: 0,
-                        });
-                        sprite.flip_x = false;
-                        config.frame_timer = AnimationConfig::timer_from_fps(config.fps);
-                    }
-                },
-            }
-
-            *state = event.state;
-            *direction = event.direction;
-        }
-    }
 }

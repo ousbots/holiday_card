@@ -4,7 +4,7 @@ use bevy::{
 };
 use bevy_light_2d::prelude::*;
 
-use crate::{animation, camera};
+use crate::{animation, camera, input};
 
 const AUDIO_SCALE: f32 = 1. / 200.;
 
@@ -19,6 +19,7 @@ pub fn run_app() {
         Light2dPlugin,
     ));
     camera::add_systems(&mut app);
+    input::add_systems(&mut app);
     animation::add_systems(&mut app);
 
     app.run();
