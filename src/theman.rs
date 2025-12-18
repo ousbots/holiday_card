@@ -4,15 +4,17 @@ use std::time::Duration;
 
 use crate::{
     animation::AnimationConfig,
+    chair,
     input::{Direction, InputEvent},
     interaction::{InRange, InteractionEvent, Interactor},
 };
 
-#[derive(Component, Clone, Copy, PartialEq)]
+#[derive(Component, Clone, Copy, Debug, PartialEq)]
 enum State {
     Idle,
     Action,
     Walking,
+    Sitting,
 }
 
 #[derive(Component, Clone, Copy, PartialEq)]
@@ -42,6 +44,8 @@ struct AudioAssets {
 struct SpriteAssets {
     walking_sprite: Handle<Image>,
     walking_layout: Handle<TextureAtlasLayout>,
+    sitting_sprite: Handle<Image>,
+    sitting_layout: Handle<TextureAtlasLayout>,
     standing_sprite: Handle<Image>,
     standing_layout: Handle<TextureAtlasLayout>,
 }
@@ -68,6 +72,7 @@ pub fn add_systems(app: &mut App) {
             handle_messages,
             handle_movement,
             handle_interactions,
+            handle_chair_interaction,
             handle_navigation_finished,
             idle_action,
         ),
@@ -75,36 +80,41 @@ pub fn add_systems(app: &mut App) {
 }
 
 // Loop through all the man's sprites and advance their animation.
-fn handle_animations(time: Res<Time>, mut query: Query<(&mut AnimationConfig, &mut Sprite, &mut State), With<TheMan>>) {
-    for (mut config, mut sprite, mut state) in &mut query {
-        // Idle state only has one frame so skip.
-        if *state == State::Idle {
-            continue;
-        }
+fn handle_animations(time: Res<Time>, mut query: Query<(&mut AnimationConfig, &mut Sprite, &State), With<TheMan>>) {
+    for (mut config, mut sprite, state) in &mut query {
+        match *state {
+            // Idle and action states don't have animations, so skip.
+            State::Idle | State::Action => {}
 
-        if *state == State::Action {
-            if let Some(atlas) = &sprite.texture_atlas {
-                if atlas.index == config.last_index {
-                    *state = State::Idle;
+            // Sitting animation plays once and holds at last frame.
+            State::Sitting => {
+                config.frame_timer.tick(time.delta());
+
+                if config.frame_timer.just_finished()
+                    && let Some(atlas) = &mut sprite.texture_atlas
+                    && atlas.index < config.last_index
+                {
+                    atlas.index += 1;
+                    config.frame_timer = AnimationConfig::timer_from_fps(config.fps);
                 }
-            } else {
-                *state = State::Idle;
             }
-        }
 
-        // Track how long the current sprite has been displayed.
-        config.frame_timer.tick(time.delta());
+            // Walking animation loops.
+            State::Walking => {
+                config.frame_timer.tick(time.delta());
 
-        if config.frame_timer.just_finished()
-            && let Some(atlas) = &mut sprite.texture_atlas
-        {
-            // On last frame, reset to the first, otherwise advance.
-            if atlas.index == config.last_index {
-                atlas.index = config.first_index;
-            } else {
-                atlas.index += 1;
+                if config.frame_timer.just_finished()
+                    && let Some(atlas) = &mut sprite.texture_atlas
+                {
+                    // On last frame, reset to the first, otherwise advance.
+                    if atlas.index == config.last_index {
+                        atlas.index = config.first_index;
+                    } else {
+                        atlas.index += 1;
+                    }
+                    config.frame_timer = AnimationConfig::timer_from_fps(config.fps);
+                }
             }
-            config.frame_timer = AnimationConfig::timer_from_fps(config.fps);
         }
     }
 }
@@ -189,16 +199,19 @@ fn handle_messages(
     >,
 ) {
     let (entity, mut config, mut sprite, mut state, mut direction, transform) = query.into_inner();
+
     for event in events.read() {
         match (event.direction, event.target) {
             (None, None) => {
-                sprite.image = sprite_assets.standing_sprite.clone();
-                sprite.texture_atlas = Some(TextureAtlas {
-                    layout: sprite_assets.standing_layout.clone(),
-                    index: 0,
-                });
-                sprite.flip_x = *direction == Direction::Left;
-                *state = State::Idle;
+                if *state != State::Action && *state != State::Sitting {
+                    sprite.image = sprite_assets.standing_sprite.clone();
+                    sprite.texture_atlas = Some(TextureAtlas {
+                        layout: sprite_assets.standing_layout.clone(),
+                        index: 0,
+                    });
+                    sprite.flip_x = *direction == Direction::Left;
+                    *state = State::Idle;
+                }
             }
 
             (Some(event_direction), None) => match event_direction {
@@ -306,15 +319,17 @@ fn handle_movement(
                 match *direction {
                     Direction::Left => {
                         transform.translation.x -= WALKING_SPEED * time.delta_secs();
+                        transform.translation.z = 10.0;
                     }
                     Direction::Right => {
                         transform.translation.x += WALKING_SPEED * time.delta_secs();
+                        transform.translation.z = 10.0;
                     }
                     Direction::Up => {}
                 }
             }
 
-            State::Idle | State::Action => (),
+            State::Idle | State::Action | State::Sitting => (),
         }
     }
 }
@@ -352,6 +367,60 @@ fn idle_action(time: Res<Time>, mut query: Query<(&mut IdleTimer, &mut Sprite, &
     }
 }
 
+// Handle chair-specific interactions for sitting/standing.
+fn handle_chair_interaction(
+    sprite_assets: Res<SpriteAssets>,
+    mut events: MessageReader<InteractionEvent>,
+    mut man_query: Query<(&mut State, &mut Sprite, &mut Transform, &mut AnimationConfig), With<TheMan>>,
+) {
+    for event in events.read() {
+        if event.id != chair::INTERACTABLE_ID {
+            continue;
+        }
+
+        if let Ok((mut state, mut sprite, mut transform, mut config)) = man_query.single_mut() {
+            match *state {
+                State::Action => {
+                    // Teleport to the chair sitting position.
+                    transform.translation.x = 74.0;
+                    transform.translation.y = -56.0;
+                    transform.translation.z = 4.0;
+
+                    // Switch to the sitting sprite textures and configuration.
+                    sprite.image = sprite_assets.sitting_sprite.clone();
+                    sprite.texture_atlas = Some(TextureAtlas {
+                        layout: sprite_assets.sitting_layout.clone(),
+                        index: 0,
+                    });
+                    sprite.flip_x = false;
+
+                    config.first_index = 0;
+                    config.last_index = 4;
+                    config.fps = 10;
+                    config.frame_timer = AnimationConfig::timer_from_fps(10);
+
+                    *state = State::Sitting;
+                }
+
+                State::Sitting => {
+                    transform.translation.z = 10.0;
+
+                    // Switch to standing sprite
+                    sprite.image = sprite_assets.standing_sprite.clone();
+                    sprite.texture_atlas = Some(TextureAtlas {
+                        layout: sprite_assets.standing_layout.clone(),
+                        index: 0,
+                    });
+
+                    *state = State::Idle;
+                }
+
+                _ => {}
+            }
+        }
+    }
+}
+
 // Initialize the man.
 fn init(
     mut commands: Commands,
@@ -362,6 +431,8 @@ fn init(
     let sprites = SpriteAssets {
         walking_sprite: asset_server.load("theman/theman_walking_animation.png"),
         walking_layout: texture_layouts.add(TextureAtlasLayout::from_grid(UVec2::splat(32), 9, 1, None, None)),
+        sitting_sprite: asset_server.load("theman/theman_sitting_animation.png"),
+        sitting_layout: texture_layouts.add(TextureAtlasLayout::from_grid(UVec2::splat(32), 5, 1, None, None)),
         standing_sprite: asset_server.load("theman/theman_standing.png"),
         standing_layout: texture_layouts.add(TextureAtlasLayout::from_grid(UVec2::splat(32), 1, 1, None, None)),
     };

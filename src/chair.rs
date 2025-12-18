@@ -9,7 +9,7 @@ struct Chair;
 const SPRITE_WIDTH: f32 = 17.0;
 const SPRITE_HEIGHT: f32 = 25.0;
 
-const INTERACTABLE_ID: &str = "chair";
+pub const INTERACTABLE_ID: &str = "chair";
 
 // Add the animation systems.
 pub fn add_systems(app: &mut App) {
