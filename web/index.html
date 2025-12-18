@@ -12,21 +12,20 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            background: linear-gradient(135deg, #161e29 0%, #1a1a2e 100%);
+            font-family: sans-serif;
+            font-size: 18px;
+            color: white;
         }
         canvas {
-            background-color: white;
+            background-color: black;
+            border: 3px solid black;
             image-rendering: pixelated;
             image-rendering: crisp-edges;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-        }
-        #loading {
-            position: absolute;
-            color: white;
-            font-size: 18px;
-            font-family: sans-serif;
+            border-radius: 8px;
         }
     </style>
+
     <script>
       // Workaround for browsers requiring user interaction before creating an audio context.
       // Intercepts and pauses the audio context and resumes it on user interaction.
@@ -90,20 +89,22 @@
     </script>
 
 </head>
+
 <body>
-    <div id="loading">Loading Christmas Scene...</div>
+    <div id="loading">Loading Scene...</div>
     <script type="module">
         import init from './wasm/greeting_card.js'
 
-        const loadingEl = document.getElementById('loading');
+        const loading = document.getElementById('loading');
         init()
-            .then(() => { loadingEl.style.display = 'none'; })
+            .then(() => { loading.style.display = 'none'; })
             .catch((error) => {
                 if (!error.message.startsWith("Using exceptions for control flow")) {
                     console.error("Failed to initialize:", error);
-                    loadingEl.textContent = "Failed to load. Please refresh.";
+                    loading.textContent = "Failed to load. Please refresh.";
                 }
             });
     </script>
 </body>
+
 </html>
