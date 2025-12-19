@@ -1,1 +1,1 @@
-[demo](https://ousbots.github.io/greeting_card)
+[holiday card](https://ousbots.github.io/holiday_card)

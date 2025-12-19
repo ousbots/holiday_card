@@ -4,12 +4,12 @@ build-web:
         --no-typescript \
         --target web \
         --out-dir ./web/wasm/ \
-        --out-name "greeting_card" \
-        ./target/wasm32-unknown-unknown/release/greeting_card.wasm
+        --out-name "holiday_card" \
+        ./target/wasm32-unknown-unknown/release/holiday_card.wasm
     wasm-opt \
         -Oz \
-        -o ./web/wasm/greeting_card_bg.wasm \
-        ./web/wasm/greeting_card_bg.wasm
+        -o ./web/wasm/holiday_card_bg.wasm \
+        ./web/wasm/holiday_card_bg.wasm
 
 run-web: build-web
     python3 -m http.server 8888

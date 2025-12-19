@@ -2548,15 +2548,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "greeting_card"
-version = "0.0.1"
-dependencies = [
- "bevy",
- "bevy_light_2d",
- "rand",
-]
-
-[[package]]
 name = "grid"
 version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2646,6 +2637,15 @@ name = "hexf-parse"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dfa686283ad6dd069f105e5ab091b04c62850d3e4cf5d67debad1933f55023df"
+
+[[package]]
+name = "holiday_card"
+version = "0.0.1"
+dependencies = [
+ "bevy",
+ "bevy_light_2d",
+ "rand",
+]
 
 [[package]]
 name = "image"
