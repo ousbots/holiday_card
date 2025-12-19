@@ -20,30 +20,12 @@ struct Fireplace;
 
 const INTERACTABLE_ID: &str = "fireplace";
 
-const VOLUME_LEVEL: f32 = 0.75;
-
-// Sprite parameters.
-const SPRITE_WIDTH: f32 = 48.;
-const SPRITE_HEIGHT: f32 = 78.;
-
-// Light effect parameters.
-const LIGHT_RADIUS: f32 = 180.0;
+// Light effect colors.
 const LIGHT_COLORS: [Color; 3] = [
     Color::srgb(1.0, 0.6, 0.2),
     Color::srgb(1.0, 0.62, 0.18),
     Color::srgb(1.0, 0.58, 0.22),
 ];
-
-const INTENSITY_OCTAVES: u32 = 4;
-const COLOR_OCTAVES: u32 = 2;
-
-const INTENSITY_FREQ: f32 = 2.0;
-const INTENSITY_MIN: f32 = 0.6;
-const INTENSITY_AMPLITUDE: f32 = 0.4;
-
-const COLOR_FREQ: f32 = 1.0;
-const COLOR_TEMPERATURE: f32 = 0.2;
-const COLOR_SEED_OFFSET: f32 = 100.0;
 
 // Add the animation systems.
 pub fn add_systems(app: &mut App) {
@@ -144,14 +126,14 @@ fn handle_light(
             State::On => {
                 commands.entity(entity).insert(FlickeringLight {
                     seed: rng.random_range(0.0..1000.0),
-                    intensity_amplitude: INTENSITY_AMPLITUDE,
-                    intensity_frequency: INTENSITY_FREQ,
-                    intensity_min: INTENSITY_MIN,
-                    intensity_octaves: INTENSITY_OCTAVES,
-                    color_frequency: COLOR_FREQ,
-                    color_octaves: COLOR_OCTAVES,
-                    color_seed_offset: COLOR_SEED_OFFSET,
-                    color_temperature: COLOR_TEMPERATURE,
+                    intensity_amplitude: 0.4,
+                    intensity_frequency: 2.0,
+                    intensity_min: 0.6,
+                    intensity_octaves: 4,
+                    color_frequency: 1.0,
+                    color_octaves: 2,
+                    color_seed_offset: 100.0,
+                    color_temperature: 0.2,
                     colors: LIGHT_COLORS.to_vec(),
                     time_offset: rng.random_range(0.0..100.0),
                 });
@@ -192,18 +174,18 @@ fn init(
         AudioPlayer::new(asset_server.load("fireplace/fire.ogg")),
         PlaybackSettings::LOOP
             .with_spatial(true)
-            .with_volume(Volume::Linear(VOLUME_LEVEL))
+            .with_volume(Volume::Linear(0.75))
             .paused(),
         Interactable {
             id: INTERACTABLE_ID.to_string(),
-            height: SPRITE_HEIGHT,
-            width: SPRITE_WIDTH,
+            height: 78.0,
+            width: 48.0,
             ..default()
         },
         PointLight2d {
             color: LIGHT_COLORS[0],
             intensity: 0.0,
-            radius: LIGHT_RADIUS,
+            radius: 180.0,
             cast_shadows: true,
             ..default()
         },
