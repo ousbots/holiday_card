@@ -167,7 +167,7 @@ fn init(
             texture_atlas: None,
             ..default()
         },
-        Transform::from_translation(Vec3::new(118.0, -31.0, 5.0)),
+        Transform::from_translation(Vec3::new(116.0, -31.0, 5.0)),
         Fireplace,
         AnimationConfig::new(0, 4, 6),
         State::Off,
