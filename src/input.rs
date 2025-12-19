@@ -10,6 +10,12 @@ struct Click;
 #[derive(Component)]
 struct ClickFade(Timer);
 
+// Cursor world position to cache the calculation.
+#[derive(Resource, Default)]
+struct CursorWorldPosition {
+    position: Option<Vec2>,
+}
+
 // Input directions.
 #[derive(Component, Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Direction {
@@ -36,9 +42,15 @@ const CURSOR_SIZE: f32 = 0.1;
 
 // Initialize input systems.
 pub fn add_systems(app: &mut App) {
-    app.add_systems(
+    app.init_resource::<CursorWorldPosition>().add_systems(
         Update,
-        (handle_fade, handle_keys, handle_mouse_input, detect_mouse_hover),
+        (
+            handle_fade,
+            handle_keys,
+            handle_mouse_input,
+            update_cursor_position.before(detect_mouse_hover),
+            detect_mouse_hover,
+        ),
     );
 }
 
@@ -154,26 +166,42 @@ fn handle_mouse_input(
     }
 }
 
+// Update the cursor world position.
+fn update_cursor_position(
+    mut cursor_res: ResMut<CursorWorldPosition>,
+    windows: Query<&Window>,
+    camera_query: Query<(&Camera, &GlobalTransform), With<Camera2d>>,
+) {
+    let Ok(window) = windows.single() else {
+        cursor_res.position = None;
+        return;
+    };
+    let Some(cursor_pos) = window.cursor_position() else {
+        cursor_res.position = None;
+        return;
+    };
+    let Ok((camera, camera_transform)) = camera_query.single() else {
+        cursor_res.position = None;
+        return;
+    };
+    let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, cursor_pos) else {
+        cursor_res.position = None;
+        return;
+    };
+
+    cursor_res.position = Some(world_pos);
+}
+
 // Detect mouse hover over interactable entities and add/remove Highlight component.
 fn detect_mouse_hover(
     time: Res<Time>,
     mut commands: Commands,
-    windows: Query<&Window>,
-    camera_query: Query<(&Camera, &GlobalTransform), With<Camera2d>>,
+    cursor_res: Res<CursorWorldPosition>,
     interactables: Query<(Entity, &GlobalTransform, &Interactable)>,
     highlighted: Query<&Highlight>,
 ) {
-    // Convert cursor position to world coordinates.
-    let Ok(window) = windows.single() else {
-        return;
-    };
-    let Some(cursor_pos) = window.cursor_position() else {
-        return;
-    };
-    let Ok((camera, camera_transform)) = camera_query.single() else {
-        return;
-    };
-    let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, cursor_pos) else {
+    // Use cached cursor world position.
+    let Some(world_pos) = cursor_res.position else {
         return;
     };
 
