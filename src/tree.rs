@@ -6,6 +6,7 @@ use crate::{
     animation::AnimationConfig,
     flickering_light::FlickeringLight,
     interaction::{Interactable, InteractionEvent, State},
+    santa::AddPresentsEvent,
 };
 
 #[derive(Clone, Resource)]
@@ -13,35 +14,24 @@ struct SpriteAssets {
     on_sprite: Handle<Image>,
     on_layout: Handle<TextureAtlasLayout>,
     off_sprite: Handle<Image>,
+    presents_sprite: Handle<Image>,
 }
 
 #[derive(Component)]
-struct Tree;
+pub struct Tree;
+
+#[derive(Component)]
+pub struct Presents;
 
 const INTERACTABLE_ID: &str = "tree";
 
-const SPRITE_WIDTH: f32 = 50.;
-const SPRITE_HEIGHT: f32 = 64.;
-
-const LIGHT_RADIUS: f32 = 50.0;
+// Light effect colors.
 const LIGHT_COLORS: [Color; 4] = [
     Color::srgb(0.2, 0.2, 0.8),
     Color::srgb(0.2, 0.8, 0.2),
     Color::srgb(0.8, 0.2, 0.2),
     Color::srgb(0.8, 0.8, 0.8),
 ];
-
-// Light effect noise parameters.
-const INTENSITY_OCTAVES: u32 = 3;
-const COLOR_OCTAVES: u32 = 3;
-
-const INTENSITY_FREQ: f32 = 1.0;
-const INTENSITY_MIN: f32 = 0.4;
-const INTENSITY_AMPLITUDE: f32 = 0.2;
-
-const COLOR_FREQ: f32 = 0.5;
-const COLOR_TEMPERATURE: f32 = 0.5;
-const COLOR_SEED_OFFSET: f32 = 100.0;
 
 // Add the animation systems.
 pub fn add_systems(app: &mut App) {
@@ -51,6 +41,7 @@ pub fn add_systems(app: &mut App) {
             handle_animations,
             handle_interaction,
             handle_light.in_set(crate::flickering_light::LightInsertionSet),
+            handle_presents_add,
         ),
     );
 }
@@ -124,14 +115,14 @@ fn handle_light(
             State::On => {
                 commands.entity(entity).insert(FlickeringLight {
                     seed: rng.random_range(0.0..1000.0),
-                    intensity_amplitude: INTENSITY_AMPLITUDE,
-                    intensity_frequency: INTENSITY_FREQ,
-                    intensity_min: INTENSITY_MIN,
-                    intensity_octaves: INTENSITY_OCTAVES,
-                    color_frequency: COLOR_FREQ,
-                    color_octaves: COLOR_OCTAVES,
-                    color_seed_offset: COLOR_SEED_OFFSET,
-                    color_temperature: COLOR_TEMPERATURE,
+                    intensity_amplitude: 0.2,
+                    intensity_frequency: 1.0,
+                    intensity_min: 0.4,
+                    intensity_octaves: 3,
+                    color_frequency: 0.5,
+                    color_octaves: 3,
+                    color_seed_offset: 100.0,
+                    color_temperature: 0.5,
                     colors: LIGHT_COLORS.to_vec(),
                     time_offset: rng.random_range(0.0..100.0),
                 });
@@ -139,6 +130,38 @@ fn handle_light(
             State::Off => {
                 commands.entity(entity).remove::<FlickeringLight>();
                 light.intensity = 0.0;
+            }
+        }
+    }
+}
+
+// Add presents sprite as a child entity to the tree when an AddPresentsEvent is received.
+fn handle_presents_add(
+    mut commands: Commands,
+    sprite_assets: Res<SpriteAssets>,
+    mut events: MessageReader<AddPresentsEvent>,
+    query: Query<(Entity, Option<&Children>), With<Tree>>,
+    presents_query: Query<Entity, With<Presents>>,
+) {
+    for _event in events.read() {
+        for (entity, children) in query.iter() {
+            let has_presents = children.map_or(false, |childs| {
+                childs.iter().any(|child| presents_query.contains(child))
+            });
+
+            if !has_presents {
+                let presents = commands
+                    .spawn((
+                        Sprite {
+                            image: sprite_assets.presents_sprite.clone(),
+                            ..default()
+                        },
+                        Transform::from_xyz(20.0, -24.0, 1.0),
+                        Presents,
+                    ))
+                    .id();
+
+                commands.entity(entity).add_child(presents);
             }
         }
     }
@@ -155,6 +178,7 @@ fn init(
         on_sprite: asset_server.load("tree/tree_animation.png"),
         on_layout: texture_layouts.add(TextureAtlasLayout::from_grid(UVec2::splat(64), 5, 1, None, None)),
         off_sprite: asset_server.load("tree/tree.png"),
+        presents_sprite: asset_server.load("tree/presents.png"),
     };
     commands.insert_resource(sprite.clone());
 
@@ -171,14 +195,14 @@ fn init(
         State::Off,
         Interactable {
             id: INTERACTABLE_ID.to_string(),
-            height: SPRITE_HEIGHT,
-            width: SPRITE_WIDTH,
+            height: 64.0,
+            width: 50.0,
             ..default()
         },
         PointLight2d {
             color: LIGHT_COLORS[0],
             intensity: 0.0,
-            radius: LIGHT_RADIUS,
+            radius: 50.0,
             cast_shadows: true,
             ..default()
         },

@@ -7,6 +7,7 @@ use crate::{
     chair,
     input::{Direction, InputEvent},
     interaction::{InRange, InteractionEvent, Interactor},
+    santa::SantasHereEvent,
 };
 
 #[derive(Component, Clone, Copy, Debug, PartialEq)]
@@ -213,6 +214,7 @@ fn handle_audio(
 fn handle_chair_interaction(
     sprite_assets: Res<SpriteAssets>,
     mut events: MessageReader<InteractionEvent>,
+    mut santa_events: MessageWriter<SantasHereEvent>,
     mut man_query: Query<(&mut State, &mut Sprite, &mut Transform, &mut AnimationConfig), With<TheMan>>,
 ) {
     for event in events.read() {
@@ -242,6 +244,7 @@ fn handle_chair_interaction(
                     config.frame_timer = AnimationConfig::timer_from_fps(10);
 
                     *state = State::Sitting;
+                    santa_events.write(SantasHereEvent);
                 }
 
                 State::Sitting => {

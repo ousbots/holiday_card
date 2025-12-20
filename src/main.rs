@@ -12,6 +12,7 @@ mod house;
 mod input;
 mod interaction;
 mod noise;
+mod santa;
 mod snow;
 mod snowman;
 mod stereo;

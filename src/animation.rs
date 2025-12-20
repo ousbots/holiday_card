@@ -2,8 +2,8 @@ use bevy::prelude::*;
 use std::time::Duration;
 
 use crate::{
-    attic_light, background, chair, fireplace, flickering_light, house, interaction, snow, snowman, stereo, theman,
-    tree,
+    attic_light, background, chair, fireplace, flickering_light, house, interaction, santa, snow, snowman, stereo,
+    theman, tree,
 };
 
 #[derive(Component)]
@@ -38,6 +38,7 @@ pub fn add_systems(app: &mut App) {
     flickering_light::add_systems(app);
     house::add_systems(app);
     fireplace::add_systems(app);
+    santa::add_systems(app);
     snow::add_systems(app);
     snowman::add_systems(app);
     stereo::add_systems(app);
