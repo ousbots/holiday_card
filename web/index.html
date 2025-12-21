@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Merry Christmas!</title>
     <style>
         body {
@@ -14,17 +14,55 @@
             min-height: 100vh;
             background: linear-gradient(135deg, #161e29 0%, #1a1a2e 100%);
             font-family: sans-serif;
-            font-size: 18px;
+            font-size: 1rem;
             color: white;
+            touch-action: pan-x pan-y;
         }
         canvas {
+            aspect-ratio: auto;
+            max-width: 95vw;
+            max-height: 95vh;
+            width: auto;
+            height: auto;
             background-color: black;
             border: 3px solid black;
             image-rendering: pixelated;
             image-rendering: crisp-edges;
-            border-radius: 8px;
+            border-radius: 0.5rem;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
             outline-style: none;
+            touch-action: none;
+        }
+
+        @media (orientation: portrait) {
+            canvas {
+                width: 95vw;
+                height: auto;
+            }
+        }
+
+        @media (orientation: landscape) {
+            canvas {
+                height: 90vh;
+                width: auto;
+            }
+        }
+
+        #orientation-hint {
+            display: none;
+            position: fixed;
+            top: 0px;
+            left: 50%;
+            translate: -50% 0%;
+            padding: 0.75rem;
+            font-size: 1rem;
+            z-index: 1000;
+        }
+
+        @media (orientation: portrait) and (max-width: 768px) {
+            #orientation-hint {
+                display: block;
+            }
         }
     </style>
 
@@ -93,6 +131,7 @@
 </head>
 
 <body>
+    <div id="orientation-hint">Rotate to landscape!</div>
     <div id="loading">Loading Scene...</div>
     <script type="module">
         import init from './wasm/holiday_card.js'
