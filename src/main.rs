@@ -2,13 +2,13 @@
 
 mod animation;
 mod app;
-mod attic_light;
 mod background;
 mod camera;
 mod chair;
 mod fireplace;
 mod flickering_light;
 mod house;
+mod house_lights;
 mod input;
 mod interaction;
 mod noise;
