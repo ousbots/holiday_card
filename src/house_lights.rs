@@ -115,11 +115,6 @@ fn handle_light(
                     State::On => {
                         sprite.image = sprite_assets.switch_on.clone();
 
-                        commands.spawn((
-                            AudioPlayer::new(audio_assets.on.clone()),
-                            PlaybackSettings::DESPAWN.with_volume(Volume::Linear(SWITCH_VOLUME)),
-                        ));
-
                         if attic_light.is_some() {
                             let colors = ATTIC_LIGHT_COLORS.to_vec();
 
@@ -200,15 +195,26 @@ fn handle_light(
                     State::Off => {
                         sprite.image = sprite_assets.switch_off.clone();
 
-                        commands.spawn((
-                            AudioPlayer::new(audio_assets.off.clone()),
-                            PlaybackSettings::DESPAWN.with_volume(Volume::Linear(SWITCH_VOLUME)),
-                        ));
-
                         commands.entity(entity).remove::<FlickeringLight>();
                         light.intensity = 0.0;
                     }
                 }
+            }
+        }
+
+        match state {
+            State::On => {
+                commands.spawn((
+                    AudioPlayer::new(audio_assets.on.clone()),
+                    PlaybackSettings::DESPAWN.with_volume(Volume::Linear(SWITCH_VOLUME)),
+                ));
+            }
+
+            State::Off => {
+                commands.spawn((
+                    AudioPlayer::new(audio_assets.off.clone()),
+                    PlaybackSettings::DESPAWN.with_volume(Volume::Linear(SWITCH_VOLUME)),
+                ));
             }
         }
     }
